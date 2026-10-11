@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Rank Math style sitemap index. The static demo serves one flat
+     sitemap; the production install splits by post type. -->
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://your-domain.com/sitemap.xml</loc>
+    <lastmod>2026-10-11</lastmod>
+  </sitemap>
+</sitemapindex>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CNC Machining Materials – Aluminum, Stainless, Titanium</title>
+  <meta name="description" content="6061 vs 7075 guidance, 303/304/316 stainless, Ti Gr5, PEEK. EN 10204 3.1 certs on metal orders. Engineer recommendations included.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://mzcnyhhd.github.io/PrecisionCNC-Demo/materials/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PrecisionCNC">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:title" content="CNC Machining Materials – Aluminum, Stainless, Titanium">
+  <meta property="og:description" content="6061 vs 7075 guidance, 303/304/316 stainless, Ti Gr5, PEEK. EN 10204 3.1 certs on metal orders. Engineer recommendations included.">
+  <meta property="og:url" content="https://mzcnyhhd.github.io/PrecisionCNC-Demo/materials/">
+  <meta property="og:image" content="https://mzcnyhhd.github.io/PrecisionCNC-Demo/assets/og-cover.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="CNC Machining Materials – Aluminum, Stainless, Titanium">
+  <meta name="twitter:description" content="6061 vs 7075 guidance, 303/304/316 stainless, Ti Gr5, PEEK. EN 10204 3.1 certs on metal orders. Engineer recommendations included.">
+  <meta name="theme-color" content="#0B2545">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://mzcnyhhd.github.io/PrecisionCNC-Demo/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Materials",
+      "item": "https://mzcnyhhd.github.io/PrecisionCNC-Demo/materials/"
+    }
+  ]
+}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="demo-strip">
+  Reference demo build &middot; self-built showcase site, portfolio review only &middot;
+  <a href="../seo-report.html">Technical SEO configuration report &rarr;</a>
+</div>
+<header class="site-header">
+  <div class="wrap header-in">
+    <a class="brand" href="../">
+      <svg class="brand-mark" viewBox="0 0 40 40" role="img" aria-label="PrecisionCNC logo">
+<rect width="40" height="40" rx="9" fill="#0B2545"/>
+<path d="M11 29V11h7.4a6.1 6.1 0 0 1 0 12.2H15.4V29H11z" fill="#fff"/>
+<circle cx="27.5" cy="24.5" r="3.6" fill="none" stroke="#E8590C" stroke-width="2.4"/>
+</svg>
+      <span>PrecisionCNC<small>Precision Machining</small></span>
+    </a>
+    <button class="burger" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav" id="site-nav" aria-label="Main">
+        <a href="../capabilities/">Capabilities</a>
+        <a href="../materials/" aria-current="page">Materials</a>
+        <a href="../industries/">Industries</a>
+        <a href="../quality/">Quality</a>
+        <a href="../about/">About</a>
+        <a href="../blog/">Blog</a>
+        <a class="nav-cta" href="../contact/">Get a Quote</a>
+    </nav>
+  </div>
+</header>
+<nav class="crumbs" aria-label="Breadcrumb">
+  <div class="wrap">
+    <ol>
+      <li><a href="../">Home</a></li>
+      <li><span aria-current="page">Materials</span></li>
+    </ol>
+  </div>
+</nav>
+<main id="main">
+
+<section class="page-head">
+  <div class="wrap">
+    <span class="eyebrow">Materials</span>
+    <h1>Materials We Machine</h1>
+    <p>Material choice drives cost, weight, corrosion behaviour and machining time. This page is
+    what our engineers actually recommend &mdash; not a metal catalogue. When a cheaper alloy does
+    the job, we say so in the quote.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">Interactive</span>
+      <h2>Which alloy do you actually need?</h2>
+      <p>Answer five questions and we will tell you which side of the 6061 / 7075 line your part
+      falls on &mdash; the same logic our quoting desk uses.</p>
+    </div>
+    <div class="tool reveal" id="alloy-tool" style="max-width:900px;margin:0 auto">
+      <div class="tool-head"><span class="dot"></span><h3>Aluminium alloy selector &mdash; 6061 vs 7075</h3></div>
+      <div class="tool-body">
+        <div id="alloy-form"></div>
+        <div class="result" id="alloy-out"></div>
+        <p class="form-note">Decision aid only. Send the application &mdash; loads, environment,
+        finish &mdash; and the quotation states the alloy with its reasoning.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec-alt">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">Aluminium</span>
+      <h2>Aluminium alloys</h2>
+      <p>Roughly 60% of what we machine is aluminium. Three alloys cover almost every job.</p>
+    </div>
+    <div class="grid g3">
+      <article class="card reveal">
+        <h3>6061-T6</h3>
+        <p class="small" style="margin-bottom:.8em">310&nbsp;MPa UTS &middot; the default</p>
+        <p>Good strength, excellent machinability, weldable, anodises beautifully. Around 80% of
+        our aluminium work.</p>
+        <ul class="ticks" style="margin-bottom:0">
+          <li>Enclosures, brackets, fixtures, heat sinks</li>
+          <li>Cosmetic black anodise parts</li>
+          <li>Welded assemblies</li>
+          <li>Marine-adjacent environments</li>
+        </ul>
+      </article>
+      <article class="card reveal">
+        <h3>7075-T6</h3>
+        <p class="small" style="margin-bottom:.8em">570&nbsp;MPa UTS &middot; strength-critical</p>
+        <p>Nearly twice the strength of 6061 for structural and aerospace parts. Costs more,
+        machines fine, avoid welding.</p>
+        <ul class="ticks" style="margin-bottom:0">
+          <li>UAV arms, airframe brackets, structural ribs</li>
+          <li>High-load actuators and linkages</li>
+          <li>Fatigue and impact-loaded parts</li>
+        </ul>
+      </article>
+      <article class="card reveal">
+        <h3>2024</h3>
+        <p class="small" style="margin-bottom:.8em">Fatigue-critical</p>
+        <p>Excellent fatigue resistance for aerospace structures, but poor corrosion resistance
+        &mdash; usually alodined rather than anodised.</p>
+        <ul class="ticks" style="margin-bottom:0">
+          <li>Cyclic-load aircraft components</li>
+          <li>Alodine or primer-protected assemblies</li>
+        </ul>
+      </article>
+    </div>
+    <div class="callout reveal" style="margin-top:24px">
+      <p><strong>The anodising detail most articles skip.</strong> 7075 contains copper, and copper
+      is the enemy of cosmetic anodising: it produces a yellowish tone and can show a slightly
+      mottled finish on thin decorative coatings. Type III hard anodise handles it fine; cosmetic
+      Type II black is where 6061 looks better. If your part is an appearance part in black
+      anodise, 6061 is usually the smarter pick &mdash; the strength difference is irrelevant on a
+      bezel.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">Stainless steel</span>
+      <h2>Stainless steel grades</h2>
+      <p>The gap between 303 and 316L is about corrosion and weldability, not strength. Choosing
+      wrongly is either money wasted or a part that rusts in service.</p>
+    </div>
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead>
+          <tr><th>Grade</th><th>Why we reach for it</th><th>Where it fails</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>303</strong></td>
+              <td>Best machinability in the stainless family &mdash; ideal for high-volume turned
+              fittings and fasteners. Free-cutting, excellent finish.</td>
+              <td>Not for marine or chloride exposure; the sulphur addition that makes it
+              free-cutting also makes it less corrosion resistant.</td></tr>
+          <tr><td><strong>304</strong></td>
+              <td>The general-purpose workhorse. Good corrosion resistance, widely available,
+              weldable.</td>
+              <td>Tougher to machine than 303 &mdash; expect a modest cost premium on turned
+              parts. Not ideal for chlorides.</td></tr>
+          <tr><td><strong>316L</strong></td>
+              <td>Marine and medical. Chloride resistance plus low carbon for welding without
+              sensitisation.</td>
+              <td>Prices above 304 and machines slower. Over-specified for dry indoor
+              applications.</td></tr>
+          <tr><td><strong>17-4PH</strong></td>
+              <td>High strength after H900 ageing &mdash; aerospace and high-load fixtures where
+              304 would be too soft.</td>
+              <td>Needs heat treatment to reach spec, so lead time includes the ageing cycle.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="sec-alt">
+  <div class="wrap">
+    <div class="grid g2" style="gap:52px;align-items:start">
+      <div class="reveal">
+        <span class="sec-kicker">Titanium</span>
+        <h2>Titanium Grade 2 &amp; Grade 5</h2>
+        <p><strong>Grade 5 (Ti-6Al-4V)</strong> for aerospace, medical implants and high-end drone
+        hardware &mdash; roughly 950&nbsp;MPa UTS, about 40% lighter than steel at equivalent
+        strength.</p>
+        <p><strong>Grade 2</strong> where formability and corrosion resistance matter more than
+        strength: chemical processing, medical instruments, marine hardware.</p>
+        <p>We machine titanium daily &mdash; rigid setups, sharp tooling, flood coolant, slower
+        surface speeds &mdash; and we quote it honestly instead of adding a fear margin for a
+        material we know well.</p>
+        <div class="callout">
+          <p><strong>On titanium cost.</strong> The premium is real and mostly unavoidable: material
+          cost is 6&ndash;10&times; aluminium, tool life is short, and cutting speeds are a quarter
+          of what aluminium tolerates. What is avoidable is a shop padding the quote because it
+          would rather not run the job. Ask what the titanium uplift actually reflects.</p>
+        </div>
+      </div>
+      <div class="reveal">
+        <span class="sec-kicker">Engineering plastics</span>
+        <h2>Engineering plastics</h2>
+        <p><strong>PEEK</strong> for medical and aerospace &mdash; machinable, sterilizable,
+        chemically inert, and priced accordingly.</p>
+        <p><strong>Delrin (POM)</strong> for gears, precision bushings and sliding parts.
+        <strong>Nylon</strong> for wear parts and impact resistance. <strong>PTFE</strong> for
+        chemical exposure and low-friction surfaces. <strong>PTFE-filled grades</strong> where
+        both are needed.</p>
+        <div class="callout callout-navy">
+          <p><strong>Plastics hold &plusmn;0.05&nbsp;mm reliably.</strong> Tighter needs a design
+          review, because thermal movement is physics rather than effort &mdash; a PEEK part grows
+          0.05&nbsp;mm per 100&nbsp;mm over a 25&nbsp;&deg;C swing. We will tell you which
+          dimensions are achievable and which are a drawing artefact.</p>
+        </div>
+        <p class="small">Working from a material datasheet someone else supplied?
+        <a href="../blog/aluminum-6061-vs-7075-cnc/">See the practical 6061 vs 7075 comparison &rarr;</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">Documentation</span>
+      <h2>Certificates &amp; traceability</h2>
+    </div>
+    <div class="grid g3">
+      <div class="card reveal">
+        <h3>EN 10204 3.1</h3>
+        <p>Mill test certificates supplied with metal orders as standard, traceable to heat lot on
+        request.</p>
+      </div>
+      <div class="card reveal">
+        <h3>PMI testing</h3>
+        <p>Positive material identification available on stainless and titanium, with the report
+        attached to the shipment.</p>
+      </div>
+      <div class="card reveal">
+        <h3>RoHS / REACH</h3>
+        <p>Declarations available for EU shipments. Plating and anodising processes are
+        RoHS-compliant.</p>
+      </div>
+    </div>
+    <div class="cta-band reveal" style="margin-top:44px">
+      <div>
+        <h2>Not sure which alloy?</h2>
+        <p>Send the application description &mdash; loads, environment, finish requirement &mdash;
+        and an engineer answers with trade-offs and a price, not a parts catalogue.</p>
+      </div>
+      <a class="btn btn-primary" href="../contact/">Ask an engineer</a>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-about">
+        <a class="brand" href="../">
+          <svg class="brand-mark" viewBox="0 0 40 40" role="img" aria-label="PrecisionCNC logo">
+<rect width="40" height="40" rx="9" fill="#0B2545"/>
+<path d="M11 29V11h7.4a6.1 6.1 0 0 1 0 12.2H15.4V29H11z" fill="#fff"/>
+<circle cx="27.5" cy="24.5" r="3.6" fill="none" stroke="#E8590C" stroke-width="2.4"/>
+</svg>
+          <span>PrecisionCNC<small>Precision Machining</small></span>
+        </a>
+        <p>Custom CNC machining — 5-axis milling, turning and mill-turn work for prototypes and
+        low-volume production. Dongguan, China. Engineered quotes in 24 hours.</p>
+      </div>
+        <div>
+          <h4>Capabilities</h4>
+          <ul>
+            <li><a href="../capabilities/#five-axis">5-Axis CNC Milling</a></li>
+            <li><a href="../capabilities/#turning">CNC Turning &amp; Mill-Turn</a></li>
+            <li><a href="../capabilities/#tolerances">Tolerances &amp; Precision</a></li>
+            <li><a href="../materials/">Materials</a></li>
+            <li><a href="../capabilities/#finishing">Finishing</a></li>
+            <li><a href="../quality/">Quality &amp; Inspection</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Industries</h4>
+          <ul>
+            <li><a href="../industries/#medical">Medical Devices</a></li>
+            <li><a href="../industries/#aerospace">Aerospace &amp; UAV</a></li>
+            <li><a href="../industries/#robotics">Robotics &amp; Automation</a></li>
+            <li><a href="../industries/#automotive">Automotive &amp; EV</a></li>
+            <li><a href="../industries/#semiconductor">Semiconductor Fixtures</a></li>
+            <li><a href="../industries/#electronics">Consumer Electronics</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="../about/">About PrecisionCNC</a></li>
+            <li><a href="../blog/">Blog</a></li>
+            <li><a href="../contact/">Upload Files &amp; Get a Quote</a></li>
+            <li><a href="../seo-report.html">Technical SEO Report</a></li>
+            <li><a href="../sitemap.xml">Sitemap (XML)</a></li>
+            <li><a href="../robots.txt">Robots.txt</a></li>
+          </ul>
+        </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>&copy; <span data-year>2026</span> PrecisionCNC Tech Co., Ltd. — reference demo build.</span>
+      <span>Static HTML/CSS/JS &middot; no CDN, no trackers, no cookies</span>
+    </div>
+  </div>
+</footer>
+<script src="../assets/site.js"></script>
+</body>
+</html>

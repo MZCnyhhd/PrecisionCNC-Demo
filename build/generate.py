@@ -1,0 +1,683 @@
+# -*- coding: utf-8 -*-
+"""
+Static site generator for the PrecisionCNC reference demo build.
+
+Emits a fully self-contained site into docs/:
+
+  docs/index.html                       Home
+  docs/capabilities|materials|.../      Section pages
+  docs/blog/<slug>/                     Four long-form articles
+  docs/seo-report.html                  Technical SEO configuration report
+  docs/404.html  robots.txt  sitemap.xml  sitemap_index.xml
+  docs/assets/{style.css,site.js,favicon.svg,og-cover.svg}
+
+Everything is idempotent: the output tree is rebuilt from scratch on each run.
+"""
+
+import os
+import re
+import shutil
+import datetime
+
+import site_tpl as T
+import pages_a as A
+import pages_b as B
+import pages_blog as BL
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+OUT = os.path.join(ROOT, "docs")
+TODAY = "2026-10-11"
+
+
+# ---------------------------------------------------------------------------
+# Page registry
+# ---------------------------------------------------------------------------
+
+def page_defs():
+    """(path, depth, nav_active, title, description, og_type, schema, body)"""
+    P = []
+    add = P.append
+
+    add(dict(path="/", depth=0, nav="", body=A.HOME, og="website",
+             title="Precision CNC Machining Services \u2013 5-Axis & Custom Parts",
+             desc="5-axis CNC milling & turning in aluminium, stainless & titanium. "
+                  "Tolerances \u00b10.005mm, prototypes in 5-7 days. ISO 9001, quote in 24h.",
+             schema=[T.ORG_SCHEMA, T.WEBSITE_SCHEMA, T.LOCALBIZ_SCHEMA,
+                     T.SERVICE_SCHEMA, T.FAQ_SCHEMA]))
+
+    add(dict(path="/capabilities/", depth=1, nav="/capabilities/", body=A.CAPABILITIES,
+             og="website",
+             title="5-Axis CNC Machining & Mill-Turn Capabilities",
+             desc="45 CNC centres incl. 8 five-axis machines. \u00b10.005mm tolerances, Zeiss CMM "
+                  "inspection, in-house finishing. Upload files for a quote.",
+             schema=[T.SERVICE_SCHEMA, T.breadcrumb_schema(
+                 [("Home", "/"), ("Capabilities", "/capabilities/")])]))
+
+    add(dict(path="/materials/", depth=1, nav="/materials/", body=A.MATERIALS,
+             og="website",
+             title="CNC Machining Materials \u2013 Aluminum, Stainless, Titanium",
+             desc="6061 vs 7075 guidance, 303/304/316 stainless, Ti Gr5, PEEK. EN 10204 3.1 "
+                  "certs on metal orders. Engineer recommendations included.",
+             schema=[T.breadcrumb_schema(
+                 [("Home", "/"), ("Materials", "/materials/")])]))
+
+    add(dict(path="/industries/", depth=1, nav="/industries/", body=B.INDUSTRIES,
+             og="website",
+             title="Industries Served \u2013 Medical, Aerospace, Robotics, EV",
+             desc="Prototype & low-volume CNC for medical, aerospace & UAV, robotics, EV testing "
+                  "and semiconductor fixtures. FAI documentation standard.",
+             schema=[T.breadcrumb_schema(
+                 [("Home", "/"), ("Industries", "/industries/")])]))
+
+    add(dict(path="/about/", depth=1, nav="/about/", body=B.ABOUT, og="website",
+             title="About Us \u2013 CNC Machine Shop in Dongguan, China",
+             desc="45 machines, 8 five-axis, 22 engineers & QC staff. Prototypes matching "
+                  "production intent since 2011. Honest lead times.",
+             schema=[T.ORG_SCHEMA, T.breadcrumb_schema(
+                 [("Home", "/"), ("About", "/about/")])]))
+
+    add(dict(path="/quality/", depth=1, nav="/quality/", body=B.QUALITY, og="website",
+             title="Quality Control & CMM Inspection \u2013 ISO 9001:2015",
+             desc="First-article CMM inspection standard on every new part. Zeiss CMM, SPC on "
+                  "production runs, FAI reports on request.",
+             schema=[T.breadcrumb_schema(
+                 [("Home", "/"), ("Quality", "/quality/")])]))
+
+    add(dict(path="/contact/", depth=1, nav="/contact/", body=B.CONTACT, og="website",
+             title="Upload Files & Get a CNC Quote in 24 Hours",
+             desc="Send STEP files + drawing for unit pricing, price breaks and honest lead times "
+                  "within 24 hours. Engineers answer RFQs.",
+             schema=[T.breadcrumb_schema(
+                 [("Home", "/"), ("Contact", "/contact/")])]))
+
+    add(dict(path="/blog/", depth=1, nav="/blog/", body=BL.blog_index_body(), og="website",
+             title="CNC Machining Blog \u2013 Process, Materials & Tolerances",
+             desc="Practical engineering notes from a working machine shop: 5-axis process "
+                  "selection, 6061 vs 7075, tolerance cost and RFQ preparation.",
+             schema=[{
+                 "@context": "https://schema.org", "@type": "Blog",
+                 "name": "PrecisionCNC Engineering Notes",
+                 "url": T.abs_url("/blog/"),
+                 "publisher": {"@id": T.BASE_URL + "/#organization"},
+             }, T.breadcrumb_schema([("Home", "/"), ("Blog", "/blog/")])]))
+
+    # ---- articles ----
+    posts = BL.parse_source()
+    for slug in BL.ORDER:
+        m = BL.META[slug]
+        add(dict(path="/blog/%s/" % slug, depth=2, nav="/blog/",
+                 body=BL.article_body(slug) + BL.related_body(slug), og="article",
+                 title=(posts[slug]["title"] + " | PrecisionCNC")[:88],
+                 desc=m["excerpt"],
+                 schema=[{
+                     "@context": "https://schema.org",
+                     "@type": "Article",
+                     "headline": posts[slug]["title"],
+                     "description": m["excerpt"],
+                     "datePublished": m["date"],
+                     "dateModified": m["date"],
+                     "articleSection": m["category"],
+                     "inLanguage": "en",
+                     "mainEntityOfPage": {"@type": "WebPage", "@id": T.abs_url("/blog/%s/" % slug)},
+                     "author": {"@type": "Organization",
+                                "name": "PrecisionCNC Engineering Team",
+                                "url": T.BASE_URL + "/about/"},
+                     "publisher": {"@id": T.BASE_URL + "/#organization"},
+                     "image": T.abs_url("/assets/og-cover.svg"),
+                 }, T.breadcrumb_schema([("Home", "/"), ("Blog", "/blog/"),
+                                         (posts[slug]["title"], "/blog/%s/" % slug)])]))
+
+    add(dict(path="/seo-report.html", depth=0, nav="", body=SEO_REPORT_BODY, og="website",
+             title="Technical SEO Configuration Report \u2013 Reference Demo Build",
+             desc="Page-by-page title/meta matrix, URL architecture, schema markup, sitemap and "
+                  "redirect plan for the PrecisionCNC reference demo build.",
+             schema=[T.breadcrumb_schema([("Home", "/"), ("Technical SEO Report", None)])]))
+
+    return P
+
+
+# ---------------------------------------------------------------------------
+# Link rewriting
+# ---------------------------------------------------------------------------
+
+def rewrite(body, depth):
+    return re.sub(r"@(/[^\"'\s)]*)", lambda m: T.rel(m.group(1), depth), body)
+
+
+def build_page(d):
+    depth = d["depth"]
+    body = rewrite(d["body"], depth)
+    crumbs = None
+    for s in (d["schema"] if isinstance(d["schema"], list) else []):
+        if s.get("@type") == "BreadcrumbList":
+            crumbs = [(i["name"], None if i["position"] == len(s["itemListElement"]) else
+                       i["item"].replace(T.BASE_URL, "")) for i in s["itemListElement"]]
+    html = T.render_head(depth, d["title"], d["desc"], d["path"], d["schema"], d["og"])
+    html += T.render_header(depth, d["nav"])
+    if crumbs and d["path"] != "/":
+        html += T.render_crumbs(depth, crumbs)
+    html += '<main id="main">\n' + body + '\n</main>\n'
+    html += T.render_footer(depth)
+    return html
+
+
+# ---------------------------------------------------------------------------
+# Technical SEO report page
+# ---------------------------------------------------------------------------
+
+SEO_REPORT_BODY = r"""
+<section class="page-head">
+  <div class="wrap">
+    <span class="eyebrow">Deliverable</span>
+    <h1>Technical SEO Configuration Report</h1>
+    <p>What was configured on this build, page by page &mdash; so the implementation can be
+    inspected rather than taken on trust. Every item below is verifiable directly in
+    View&nbsp;Source or against the live files.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="callout reveal">
+      <p><strong>What this build is.</strong> A self-built reference demo: a static showcase site
+      covering the same technical-SEO surface a WordPress build delivers on the client's own
+      hosting (Cloudflare + SiteGround). It is published so the implementation can be reviewed and
+      stress-tested before any money moves. It is not a WordPress install, and it is not presented
+      as one &mdash; the WordPress version is deployed on the client's own hosting, with the
+      admin, database and hosting account handed over.</p>
+    </div>
+
+    <div class="sec-head reveal" style="margin-top:44px">
+      <span class="sec-kicker">01 &mdash; Page matrix</span>
+      <h2>Title &amp; meta description, per URL</h2>
+      <p>Every indexable URL has a unique title (under 60 characters where possible), a unique
+      meta description, and exactly one canonical. No duplicates, no auto-generated boilerplate.</p>
+    </div>
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead><tr><th>URL</th><th>Focus keyword</th><th>Title</th><th>Meta description</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">/</td><td>cnc machining services china</td>
+              <td>Precision CNC Machining Services &ndash; 5-Axis &amp; Custom Parts</td>
+              <td>5-axis CNC milling &amp; turning in aluminium, stainless &amp; titanium. Tolerances &plusmn;0.005mm, prototypes in 5-7 days. ISO 9001, quote in 24h.</td></tr>
+          <tr><td class="mono">/capabilities/</td><td>5 axis cnc machining services</td>
+              <td>5-Axis CNC Machining &amp; Mill-Turn Capabilities</td>
+              <td>45 CNC centres incl. 8 five-axis machines. &plusmn;0.005mm tolerances, Zeiss CMM inspection, in-house finishing.</td></tr>
+          <tr><td class="mono">/materials/</td><td>cnc machining materials</td>
+              <td>CNC Machining Materials &ndash; Aluminum, Stainless, Titanium</td>
+              <td>6061 vs 7075 guidance, 303/304/316 stainless, Ti Gr5, PEEK. EN 10204 3.1 certs on metal orders.</td></tr>
+          <tr><td class="mono">/industries/</td><td>cnc machining industries</td>
+              <td>Industries Served &ndash; Medical, Aerospace, Robotics, EV</td>
+              <td>Prototype &amp; low-volume CNC for medical, aerospace &amp; UAV, robotics, EV testing and semiconductor fixtures.</td></tr>
+          <tr><td class="mono">/quality/</td><td>cmm inspection report</td>
+              <td>Quality Control &amp; CMM Inspection &ndash; ISO 9001:2015</td>
+              <td>First-article CMM inspection standard on every new part. Zeiss CMM, SPC on production runs, FAI on request.</td></tr>
+          <tr><td class="mono">/about/</td><td>cnc machine shop china</td>
+              <td>About Us &ndash; CNC Machine Shop in Dongguan, China</td>
+              <td>45 machines, 8 five-axis, 22 engineers &amp; QC staff. Prototypes matching production intent since 2011.</td></tr>
+          <tr><td class="mono">/contact/</td><td>cnc machining quote</td>
+              <td>Upload Files &amp; Get a CNC Quote in 24 Hours</td>
+              <td>Send STEP files + drawing for unit pricing, price breaks and honest lead times within 24 hours.</td></tr>
+          <tr><td class="mono">/blog/</td><td>cnc machining blog</td>
+              <td>CNC Machining Blog &ndash; Process, Materials &amp; Tolerances</td>
+              <td>Practical engineering notes from a working machine shop.</td></tr>
+          <tr><td class="mono">/blog/5-axis-cnc-machining-when-needed/</td><td>5 axis cnc machining</td>
+              <td>5-Axis CNC Machining: When Your Project Actually Needs It</td>
+              <td>The three situations where 5-axis genuinely saves money, and the ones where 3-axis does the same job for 40% less.</td></tr>
+          <tr><td class="mono">/blog/aluminum-6061-vs-7075-cnc/</td><td>aluminum 6061 vs 7075</td>
+              <td>Aluminum 6061 vs 7075 for CNC Machining: A Practical Comparison</td>
+              <td>Strength, weldability, corrosion behaviour and the anodising detail most articles skip.</td></tr>
+          <tr><td class="mono">/blog/how-to-prepare-cad-files-rfq/</td><td>cnc machining rfq</td>
+              <td>How to Prepare CAD Files for a CNC Machining RFQ</td>
+              <td>File formats, tolerance marking and thread callouts &mdash; the five-line checklist that removes quote friction.</td></tr>
+          <tr><td class="mono">/blog/cnc-machining-tolerances-explained/</td><td>cnc machining tolerances</td>
+              <td>Understanding CNC Machining Tolerances: From &plusmn;0.1mm to &plusmn;0.005mm</td>
+              <td>What each tolerance band costs, why cost scales with risk not linearly, and the GD&amp;T callouts that drive price.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="sec-alt">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">02 &mdash; Architecture</span>
+      <h2>URL structure and internal linking</h2>
+    </div>
+    <div class="grid g2" style="gap:44px;align-items:start">
+      <div class="reveal">
+        <h3>Flat, keyword-bearing, trailing-slash consistent</h3>
+        <p>Service sites are shallow and deep rather than wide: a small number of pillar pages,
+        each carrying real depth.</p>
+        <ul class="ticks">
+          <li>Pillars: <span class="mono">/capabilities/ /materials/ /industries/ /quality/</span></li>
+          <li>Supporting article cluster under <span class="mono">/blog/&lt;slug&gt;/</span></li>
+          <li>Every URL lower-case, hyphenated, no parameters, trailing slash enforced</li>
+          <li>Breadcrumbs rendered as visible nav <em>and</em> as BreadcrumbList schema</li>
+        </ul>
+        <h3 style="margin-top:1.6em">Internal link matrix</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>From</th><th>To</th><th>Anchor</th></tr></thead>
+            <tbody>
+              <tr><td>5-axis article</td><td class="mono">/capabilities/</td><td>5-axis CNC machining services</td></tr>
+              <tr><td>5-axis article</td><td class="mono">/contact/</td><td>upload files for a quote</td></tr>
+              <tr><td>6061 vs 7075</td><td class="mono">/materials/</td><td>cnc machining materials</td></tr>
+              <tr><td>6061 vs 7075</td><td class="mono">/capabilities/</td><td>capabilities these alloys are machined on</td></tr>
+              <tr><td>CAD files article</td><td class="mono">/contact/</td><td>RFQ form with file upload</td></tr>
+              <tr><td>CAD files article</td><td class="mono">/quality/</td><td>CMM report and inspection workflow</td></tr>
+              <tr><td>Tolerances article</td><td class="mono">/capabilities/</td><td>tolerance capability</td></tr>
+              <tr><td>Tolerances article</td><td class="mono">/materials/</td><td>which materials make tight tolerances harder</td></tr>
+              <tr><td>Capabilities &rarr; articles</td><td>post 1, post 4</td><td>reverse links from pillar to cluster</td></tr>
+              <tr><td>Materials &rarr; article</td><td>post 2</td><td>reverse link from pillar to cluster</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="reveal">
+        <h3>Files you can open right now</h3>
+        <ul class="ticks">
+          <li><a href="@/sitemap.xml">/sitemap.xml</a> &mdash; 12 indexable URLs with lastmod</li>
+          <li><a href="@/sitemap_index.xml">/sitemap_index.xml</a> &mdash; index format as Rank Math emits</li>
+          <li><a href="@/robots.txt">/robots.txt</a> &mdash; admin disallowed, sitemap declared</li>
+          <li><a href="@/404.html">/404.html</a> &mdash; crawlable, noindex, recovery links</li>
+        </ul>
+        <h3 style="margin-top:1.6em">robots.txt</h3>
+        <pre style="background:var(--bg-3);border-radius:8px;padding:16px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.6;margin:0">User-agent: *
+Disallow: /wp-admin/
+Allow: /wp-admin/admin-ajax.php
+Disallow: /?s=
+Disallow: /search/
+
+Sitemap: https://your-domain.com/sitemap_index.xml</pre>
+        <p class="small" style="margin-top:12px">WordPress-specific paths are disallowed because
+        those URLs exist on the production install. On this static demo they are harmless but kept
+        for parity.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">03 &mdash; Structured data</span>
+      <h2>Schema markup on this build</h2>
+      <p>All markup is JSON-LD embedded in the page &mdash; inspectable in View Source, no plugin
+      required to render it, and it survives theme changes.</p>
+    </div>
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead><tr><th>Type</th><th>Where</th><th>Key properties</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Organization</strong></td><td>Home, About</td>
+              <td>name, url, logo, foundingDate, numberOfEmployees, address, contactPoint, knowsAbout</td></tr>
+          <tr><td><strong>WebSite</strong></td><td>Home</td>
+              <td>url, name, publisher &rarr; Organization @id</td></tr>
+          <tr><td><strong>LocalBusiness</strong></td><td>Home</td>
+              <td>address, geo, openingHoursSpecification, priceRange</td></tr>
+          <tr><td><strong>Service</strong></td><td>Home, Capabilities</td>
+              <td>serviceType, provider, areaServed, hasOfferCatalog with 4 offers</td></tr>
+          <tr><td><strong>FAQPage</strong></td><td>Home</td>
+              <td>5 questions with acceptedAnswer &mdash; eligible for FAQ rich results</td></tr>
+          <tr><td><strong>BreadcrumbList</strong></td><td>Every page except Home</td>
+              <td>itemListElement with position + item URL</td></tr>
+          <tr><td><strong>Article</strong></td><td>All 4 posts</td>
+              <td>headline, datePublished, dateModified, articleSection, author, publisher, image</td></tr>
+          <tr><td><strong>Blog</strong></td><td>/blog/</td>
+              <td>name, url, publisher</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout reveal" style="margin-top:24px">
+      <p><strong>Deliberately absent:</strong> Review, AggregateRating and duplicate Organization
+      nodes. Inventing reviews for a demo site would be the fastest way to get a manual action on
+      the client's real domain, and duplicated Organization markup across pages is a common
+      self-inflicted problem &mdash; one canonical node referenced by <span class="mono">@id</span>
+      is the correct pattern.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec-alt">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">04 &mdash; Crawl &amp; index</span>
+      <h2>Canonical, hreflang, redirects</h2>
+    </div>
+    <div class="grid g3">
+      <div class="card reveal">
+        <h3>Canonical</h3>
+        <p>One self-referencing canonical per URL, absolute and https. No canonical pointing at a
+        different page, no missing tags on paginated or article URLs.</p>
+      </div>
+      <div class="card reveal">
+        <h3>hreflang</h3>
+        <p>This build is single-language, so hreflang is correctly <em>absent</em>. When a second
+        locale is added the pattern is reciprocal tags plus a language switcher:
+        <span class="mono">en</span> &middot; <span class="mono">x-default</span> &middot; the
+        localised path pair.</p>
+      </div>
+      <div class="card reveal">
+        <h3>Redirects</h3>
+        <p>All 301, never 302, and never chained. www and non-www consolidated to one host,
+        http upgraded to https at the Cloudflare edge and again at origin.</p>
+      </div>
+    </div>
+    <div class="tbl-wrap reveal" style="margin-top:32px">
+      <table>
+        <thead><tr><th>From</th><th>To</th><th>Code</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">http://example.com/*</td><td class="mono">https://example.com/*</td><td>301</td><td>Protocol consolidation</td></tr>
+          <tr><td class="mono">https://www.example.com/*</td><td class="mono">https://example.com/*</td><td>301</td><td>Host consolidation (permanent)</td></tr>
+          <tr><td class="mono">/index.php</td><td class="mono">/</td><td>301</td><td>WordPress duplicate entry point</td></tr>
+          <tr><td class="mono">/products/*</td><td class="mono">/capabilities/*</td><td>301</td><td>Legacy URL pattern from earlier structure</td></tr>
+          <tr><td class="mono">/?p=123</td><td class="mono">/{post-name}/</td><td>301</td><td>WordPress shortlink to permalink</td></tr>
+          <tr><td class="mono">/tag/*, /category/*</td><td class="mono">/blog/</td><td>301</td><td>Thin archive consolidation</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small reveal" style="margin-top:14px">404s return a real HTTP 404 with a crawlable
+    page (not a soft-404) &mdash; on this build the host serves
+    <a href="@/404.html">/404.html</a> automatically.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">05 &mdash; Speed &amp; delivery</span>
+      <h2>What keeps PageSpeed in the green</h2>
+      <p>The single biggest determinant of mobile PageSpeed on a WordPress build is not caching
+      plugins &mdash; it is how many render-blocking third-party requests the theme drags in.</p>
+    </div>
+    <div class="grid g2" style="gap:44px;align-items:start">
+      <div class="reveal">
+        <ul class="ticks">
+          <li><strong>Zero external requests.</strong> No Google Fonts, no jQuery from a CDN, no
+          icon font, no analytics script on this build. System font stack instead.</li>
+          <li><strong>One stylesheet, one script</strong> &mdash; around 40&nbsp;KB uncompressed
+          combined, roughly 9&nbsp;KB over the wire after gzip/brotli.</li>
+          <li><strong>No layout shift.</strong> Every element has intrinsic sizing; the SVG logo
+          and icons have explicit dimensions, so CLS stays at 0.</li>
+          <li><strong>Cloudflare in front</strong> &mdash; edge caching, brotli, HTTP/3, image
+          resizing at the edge rather than on origin.</li>
+          <li><strong>LiteSpeed Cache on origin</strong> &mdash; page cache, CSS/JS minify and
+          combine, critical CSS generation, WebP conversion, lazy-load below the fold.</li>
+          <li><strong>Fonts self-hosted or system.</strong> If a brand font is required it gets
+          self-hosted with <span class="mono">font-display: swap</span> and preloaded via
+          <span class="mono">&lt;link rel="preload"&gt;</span>, never a Google Fonts call.</li>
+        </ul>
+      </div>
+      <div class="reveal">
+        <div class="tool">
+          <div class="tool-head"><span class="dot"></span><h3>Target Core Web Vitals</h3></div>
+          <div class="tool-body">
+            <div class="spec" style="padding-top:0"><dt>LCP</dt><dd>&lt; 2.0&nbsp;s on mobile 4G &mdash; hero text is server-rendered, no image dependency</dd></div>
+            <div class="spec"><dt>INP</dt><dd>&lt; 100&nbsp;ms &mdash; no framework hydration on the front end</dd></div>
+            <div class="spec"><dt>CLS</dt><dd>&lt; 0.02 &mdash; explicit dimensions everywhere, no injected banners</dd></div>
+            <div class="spec"><dt>TTFB</dt><dd>&lt; 400&nbsp;ms &mdash; Cloudflare edge cache hit plus origin page cache</dd></div>
+            <div class="spec" style="border-bottom:0"><dt>Page weight</dt><dd>&lt; 500&nbsp;KB total including above-the-fold imagery</dd></div>
+          </div>
+        </div>
+        <div class="callout" style="margin-top:20px">
+          <p><strong>Why no analytics here.</strong> A demo build should not ship a tracking script
+          that pings a third party on every visit. On the production install GA4 is loaded through
+          the site's own domain with consent handling, deferred until after first interaction.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec-alt">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-kicker">06 &mdash; Verification</span>
+      <h2>How each claim above gets checked</h2>
+      <p>Every line in this report maps to a tool the client can run themselves.</p>
+    </div>
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead><tr><th>Claim</th><th>How to verify</th></tr></thead>
+        <tbody>
+          <tr><td>Unique titles &amp; descriptions</td><td>Screaming Frog crawl, free tier covers 500 URLs &mdash; check the Title 1 / Meta Description 1 columns for duplicates and length overflows</td></tr>
+          <tr><td>Canonicals correct</td><td>Screaming Frog &rarr; Canonicals tab; confirm every canonical is self-referencing and absolute</td></tr>
+          <tr><td>Schema valid</td><td>Google Rich Results Test on each URL; Schema.org validator for the non-rich-result types</td></tr>
+          <tr><td>No soft 404s</td><td>Fetch a nonexistent URL, confirm HTTP 404 in the response headers rather than 200</td></tr>
+          <tr><td>Sitemap clean</td><td>Submit to GSC &rarr; Sitemaps; confirm &ldquo;Success&rdquo; and 0 discovered-not-indexed errors</td></tr>
+          <tr><td>Redirects not chained</td><td><span class="mono">curl -I</span> on each legacy URL &mdash; exactly one 301, then a 200</td></tr>
+          <tr><td>Core Web Vitals</td><td>PageSpeed Insights for lab data; Search Console Core Web Vitals report for field data (needs ~28 days of traffic)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout callout-navy reveal" style="margin-top:24px">
+      <p><strong>On indexing timelines.</strong> Being honest about this matters: no one controls
+      Google's indexing schedule. GSC verification is immediate, sitemap submission is immediate,
+      but meaningful impressions data typically appears 7&ndash;14 days after indexing, and
+      &ldquo;real&rdquo; ranking movement needs a month or more. Anyone promising page-one rankings
+      within a fortnight is either buying links or guessing.</p>
+    </div>
+  </div>
+</section>
+"""
+
+
+# ---------------------------------------------------------------------------
+# Assets
+# ---------------------------------------------------------------------------
+
+FAVICON = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+<rect width="40" height="40" rx="9" fill="#0B2545"/>
+<path d="M11 29V11h7.4a6.1 6.1 0 0 1 0 12.2H15.4V29H11z" fill="#fff"/>
+<circle cx="27.5" cy="24.5" r="3.6" fill="none" stroke="#E8590C" stroke-width="2.4"/>
+</svg>
+"""
+
+OG_COVER = """<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#0B2545"/><stop offset=".55" stop-color="#13315C"/><stop offset="1" stop-color="#1B4079"/>
+</linearGradient>
+<radialGradient id="glow" cx=".8" cy=".05" r=".7">
+<stop offset="0" stop-color="#E8590C" stop-opacity=".38"/><stop offset="1" stop-color="#E8590C" stop-opacity="0"/>
+</radialGradient>
+<pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse">
+<path d="M46 0H0v46" fill="none" stroke="#ffffff" stroke-opacity=".05" stroke-width="1"/>
+</pattern>
+</defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<rect width="1200" height="630" fill="url(#grid)"/>
+<rect width="1200" height="630" fill="url(#glow)"/>
+<g transform="translate(80,74)">
+  <rect width="64" height="64" rx="14" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".28"/>
+  <path d="M18 46V18h12a10 10 0 0 1 0 20h-5v8h-7z" fill="#fff"/>
+  <circle cx="45" cy="39" r="6" fill="none" stroke="#E8590C" stroke-width="4"/>
+</g>
+<text x="164" y="118" font-family="Helvetica,Arial,sans-serif" font-size="30" font-weight="700" fill="#ffffff">PrecisionCNC</text>
+<text x="164" y="146" font-family="Helvetica,Arial,sans-serif" font-size="16" fill="#9FB4C9" letter-spacing="2.5">PRECISION MACHINING</text>
+<text x="80" y="310" font-family="Helvetica,Arial,sans-serif" font-size="64" font-weight="700" fill="#ffffff">5-Axis CNC Machining</text>
+<text x="80" y="386" font-family="Helvetica,Arial,sans-serif" font-size="64" font-weight="700" fill="#FFB37A">&amp; Custom Parts</text>
+<text x="80" y="452" font-family="Helvetica,Arial,sans-serif" font-size="26" fill="#C6D5E4">Aluminium &#183; Stainless &#183; Titanium &#183; Engineering plastics</text>
+<g font-family="Helvetica,Arial,sans-serif" font-size="25" font-weight="700" fill="#ffffff">
+<text x="80" y="530">45</text><text x="112" y="530" font-size="17" font-weight="400" fill="#9FB4C9"> machining centres</text>
+<text x="330" y="530">8</text><text x="352" y="530" font-size="17" font-weight="400" fill="#9FB4C9"> five-axis machines</text>
+<text x="580" y="530">&#177;0.005mm</text><text x="775" y="530" font-size="17" font-weight="400" fill="#9FB4C9"> tolerance</text>
+<text x="960" y="530">24h</text><text x="1010" y="530" font-size="17" font-weight="400" fill="#9FB4C9"> quoting</text>
+</g>
+<rect x="80" y="562" width="1040" height="1" fill="#ffffff" fill-opacity=".14"/>
+<text x="80" y="596" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#7A8FA3">Reference demo build &#183; self-built showcase site &#183; not a client project</text>
+</svg>
+"""
+
+ROBOTS = """# robots.txt - PrecisionCNC reference demo build
+# Mirrors the production WordPress configuration for parity.
+# Replace your-domain.com with the live domain after DNS cutover.
+
+User-agent: *
+Disallow: /wp-admin/
+Allow: /wp-admin/admin-ajax.php
+Disallow: /?s=
+Disallow: /search/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /*?add-to-cart=
+Disallow: /*?orderby=
+Disallow: /*?filter_
+
+# Block AI scrapers the client does not want training on their content.
+# Comment out if visibility in AI answers matters more than control.
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+Sitemap: https://your-domain.com/sitemap_index.xml
+"""
+
+
+def build_sitemap(pages):
+    urls = []
+    for d in pages:
+        if d["path"] in ("/404.html", "/seo-report.html"):
+            continue
+        urls.append(d["path"])
+    rows = "\n".join(
+        '  <url>\n'
+        '    <loc>%s</loc>\n'
+        '    <lastmod>%s</lastmod>\n'
+        '    <changefreq>%s</changefreq>\n'
+        '    <priority>%s</priority>\n'
+        '  </url>' % (T.abs_url(u), TODAY,
+                       "weekly" if u in ("/", "/blog/") else "monthly",
+                       "1.0" if u == "/" else ("0.9" if u.count("/") == 2 else "0.8"))
+        for u in urls)
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<?xml-stylesheet type="text/xsl" href="//your-domain.com/main-sitemap.xsl"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + rows + "\n</urlset>\n")
+    return urls, body
+
+
+def build_sitemap_index():
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<!-- Rank Math style sitemap index. The static demo serves one flat\n'
+            '     sitemap; the production install splits by post type. -->\n'
+            '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            '  <sitemap>\n'
+            '    <loc>https://your-domain.com/sitemap.xml</loc>\n'
+            '    <lastmod>%s</lastmod>\n'
+            '  </sitemap>\n'
+            '</sitemapindex>\n' % TODAY)
+
+
+NOT_FOUND = None  # built in main() so it can reuse the template
+
+
+def build_404():
+    body = r"""
+<section class="page-head">
+  <div class="wrap">
+    <span class="eyebrow">Error 404</span>
+    <h1>That page has been machined away</h1>
+    <p>The URL you requested does not exist on this build. It may have been renamed, or the link
+    that sent you here has a typo in it.</p>
+  </div>
+</section>
+<section>
+  <div class="wrap-n">
+    <div class="note-404">404</div>
+    <p class="lead">Rather than send you back with nothing, here is where most visitors were
+    heading:</p>
+    <div class="grid g2" style="margin-top:1.6rem">
+      <a class="card" href="@/capabilities/"><h3>Capabilities</h3>
+        <p style="margin:0">5-axis milling, turning, mill-turn, tolerances and finishing.</p></a>
+      <a class="card" href="@/materials/"><h3>Materials</h3>
+        <p style="margin:0">Aluminium, stainless, titanium and engineering plastics.</p></a>
+      <a class="card" href="@/contact/"><h3>Get a Quote</h3>
+        <p style="margin:0">Upload a STEP file; engineering feedback within 24 hours.</p></a>
+      <a class="card" href="@/blog/"><h3>Blog</h3>
+        <p style="margin:0">Process selection, material trade-offs and drawing habits.</p></a>
+    </div>
+    <div class="callout" style="margin-top:2rem">
+      <p><strong>Note for anyone auditing the SEO setup:</strong> this page is served with a real
+      HTTP 404 status, is marked <span class="mono">noindex, follow</span>, and links back into the
+      site. That combination is the correct handling &mdash; a soft-404 (a &ldquo;not found&rdquo;
+      page returning HTTP 200) is one of the most common crawl-budget leaks on WordPress sites.</p>
+    </div>
+    <p><a class="btn btn-outline" href="@/">Back to the homepage</a></p>
+  </div>
+</section>
+"""
+    d = dict(path="/404.html", depth=0, nav="", body=body, og="website",
+             title="404 \u2013 Page Not Found | PrecisionCNC",
+             desc="The requested page was not found. Browse capabilities, materials, the blog or "
+                  "request a CNC machining quote.",
+             schema=[])
+    depth = 0
+    html = T.render_head(depth, d["title"], d["desc"], d["path"], d["schema"], d["og"],
+                         robots="noindex, follow")
+    html += T.render_header(depth, "")
+    html += '<main id="main">\n' + rewrite(body, depth) + '\n</main>\n'
+    html += T.render_footer(depth)
+    return html
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def write(path, text):
+    full = os.path.join(OUT, path)
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    with open(full, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    return full
+
+
+def main():
+    # clean everything except the hand-written assets
+    if os.path.isdir(OUT):
+        for name in os.listdir(OUT):
+            p = os.path.join(OUT, name)
+            if name == "assets":
+                continue
+            if os.path.isdir(p):
+                shutil.rmtree(p)
+            else:
+                os.remove(p)
+    os.makedirs(OUT, exist_ok=True)
+
+    pages = page_defs()
+    written = 0
+    for d in pages:
+        out_path = d["path"].lstrip("/")
+        if out_path == "" or out_path.endswith("/"):
+            out_path = out_path + "index.html"
+        if not out_path.endswith(".html"):
+            out_path += "index.html"
+        write(out_path, build_page(d))
+        written += 1
+
+    write("404.html", build_404())
+    written += 1
+
+    write("assets/favicon.svg", FAVICON)
+    write("assets/og-cover.svg", OG_COVER)
+
+    urls, sitemap = build_sitemap(pages)
+    write("sitemap.xml", sitemap)
+    write("sitemap_index.xml", build_sitemap_index())
+    write("robots.txt", ROBOTS)
+
+    print("wrote %d HTML pages" % written)
+    print("sitemap URLs: %d" % len(urls))
+    for u in urls:
+        print("   ", u)
+
+
+if __name__ == "__main__":
+    main()

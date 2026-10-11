@@ -1,0 +1,7 @@
+# Build artefacts and local scratch — not part of the published site
+__pycache__/
+*.pyc
+build/shots/
+build/.cache/
+.DS_Store
+Thumbs.db
